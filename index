@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Word Path Game</title>
+  <style>
+    canvas {
+      border: 2px solid #333;
+      display: block;
+      margin: 20px auto;
+    }
+    .center {
+      text-align: center;
+      font-family: sans-serif;
+    }
+    #buttons {
+      display: none;
+      margin-top: 10px;
+    }
+    button {
+      margin: 10px;
+      padding: 10px 20px;
+      font-size: 18px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+    .btnA { background-color: #4a90e2; color: white; }
+    .btnB { background-color: #7ed321; color: white; }
+    #countdown {
+      font-size: 100px;
+      font-weight: bold;
+      position: absolute;
+      top: 40%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      display: none;
+    }
+    #definition {
+      font-size: 22px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div id="countdown" class="center"></div>
+  <canvas id="gameCanvas" width="600" height="400"></canvas>
+  <div class="center">
+    <div id="definition"></div>
+    <div id="buttons">
+      <button class="btnA" onclick="handleChoice('Word A')">Word A</button>
+      <button class="btnB" onclick="handleChoice('Word B')">Word B</button>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    const countdownEl = document.getElementById("countdown");
+
+    const characterImg = new Image();
+    characterImg.src = "희재가만든캐릭터_세모.png";
+
+    const backgroundImg = new Image();
+    backgroundImg.src = "455828a6-a9bc-488d-b82d-f4d15c66354e.png";
+
+    let questions = [];
+    let selectedQuestions = [];
+    let currentQuestion = 0;
+    let characterX = 250;
+    let score = 0;
+
+    function drawScene() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(backgroundImg, 0, 0, canvas.width, canvas.height);
+      ctx.drawImage(characterImg, characterX, 250, 100, 100);
+    }
+
+    function updateUI() {
+      const q = selectedQuestions[currentQuestion];
+      document.getElementById("definition").innerText = `Definition: ${q.definition}`;
+      document.querySelector(".btnA").innerText = `Word A: ${q.wordA}`;
+      document.querySelector(".btnB").innerText = `Word B: ${q.wordB}`;
+    }
+
+    function handleChoice(choice) {
+      const q = selectedQuestions[currentQuestion];
+      const isCorrect = choice === q.correct;
+      if (isCorrect) score++;
+
+      // animate character
+      let direction = choice === "Word A" ? -100 : 100;
+      characterX += direction;
+      drawScene();
+
+      // next question
+      currentQuestion++;
+      if (currentQuestion < selectedQuestions.length) {
+        setTimeout(() => {
+          characterX = 250;
+          updateUI();
+          drawScene();
+        }, 800);
+      } else {
+        setTimeout(() => {
+          alert(`Great! ${score}/5개를 맞췄어! 또 한번 해볼까?`);
+          location.reload();
+        }, 800);
+      }
+    }
+
+    function startCountdown(callback) {
+      let count = 5;
+      countdownEl.innerText = count;
+      countdownEl.style.display = 'block';
+
+      const timer = setInterval(() => {
+        count--;
+        countdownEl.innerText = count;
+        if (count === 0) {
+          clearInterval(timer);
+          countdownEl.style.display = 'none';
+          callback();
+        }
+      }, 1000);
+    }
+
+    function startGame() {
+      // 랜덤하게 5개 선택
+      selectedQuestions = questions.sort(() => 0.5 - Math.random()).slice(0, 5);
+      currentQuestion = 0;
+      score = 0;
+      characterX = 250;
+
+      updateUI();
+      drawScene();
+      document.getElementById("buttons").style.display = "block";
+    }
+
+    function loadCSV(callback) {
+      fetch("questions.csv")
+        .then(res => res.text())
+        .then(text => {
+          const lines = text.trim().split("\n").slice(1); // skip header
+          questions = lines.map(line => {
+            const [definition, wordA, wordB, correct] = line.split(",");
+            return { definition, wordA, wordB, correct };
+          });
+          callback();
+        });
+    }
+
+    window.onload = () => {
+      backgroundImg.onload = () => {
+        characterImg.onload = () => {
+          drawScene();
+          loadCSV(() => {
+            startCountdown(startGame);
+          });
+        };
+      };
+    };
+  </script>
+</body>
+</html>
